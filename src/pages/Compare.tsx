@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, where, documentId } from 'firebase/firestore';
-import { Product } from '../types';
+import { Product, Review } from '../types';
 import { useStore } from '../store/useStore';
 import { Trash2, ShoppingBag, ArrowLeft, Star } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
+interface RatingSummary {
+  [productId: string]: {
+    average: number;
+    count: number;
+  };
+}
+
 export default function Compare() {
   const { compareList, toggleCompare, clearCompare, addToCart } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
+  const [ratings, setRatings] = useState<RatingSummary>({});
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -25,7 +33,27 @@ export default function Compare() {
       try {
         const snapshot = await getDocs(collection(db, 'products'));
         const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-        setProducts(all.filter(p => compareList.includes(p.id)));
+        const filtered = all.filter(p => compareList.includes(p.id));
+        setProducts(filtered);
+
+        // Fetch ratings for these products
+        const ratingsData: RatingSummary = {};
+        for (const p of filtered) {
+          const q = query(collection(db, 'reviews'), where('productId', '==', p.id));
+          const reviewSnap = await getDocs(q);
+          const productReviews = reviewSnap.docs.map(doc => doc.data() as Review);
+          
+          if (productReviews.length > 0) {
+            const sum = productReviews.reduce((acc, r) => acc + r.rating, 0);
+            ratingsData[p.id] = {
+              average: Number((sum / productReviews.length).toFixed(1)),
+              count: productReviews.length
+            };
+          } else {
+            ratingsData[p.id] = { average: 0, count: 0 };
+          }
+        }
+        setRatings(ratingsData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -111,6 +139,28 @@ export default function Compare() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   <tr>
+                    <td className="p-8 text-xs font-black uppercase tracking-widest text-gray-400">Community Rating</td>
+                    {products.map(p => {
+                      const r = ratings[p.id];
+                      return (
+                        <td key={p.id} className="p-8">
+                           {r && r.count > 0 ? (
+                             <div className="flex flex-col space-y-1">
+                               <div className="flex items-center space-x-1">
+                                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                                 <span className="text-sm font-black italic">{r.average}</span>
+                               </div>
+                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{r.count} Reviews</span>
+                             </div>
+                           ) : (
+                             <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">No ratings</span>
+                           )}
+                        </td>
+                      );
+                    })}
+                    {Array.from({ length: 4 - products.length }).map((_, i) => <td key={`e-${i}`} className="p-8" />)}
+                  </tr>
+                  <tr>
                     <td className="p-8 text-xs font-black uppercase tracking-widest text-gray-400">Category</td>
                     {products.map(p => (
                       <td key={p.id} className="p-8 text-sm font-bold uppercase tracking-tight text-gray-900">{p.category}</td>
@@ -155,9 +205,9 @@ export default function Compare() {
                          <button 
                            onClick={() => addToCart(p, p.sizes[0])}
                            disabled={p.stock === 0}
-                           className="w-full bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 hover:bg-amber-600 transition-all shadow-md disabled:opacity-50"
+                           className="w-full bg-black text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center space-x-3 hover:bg-amber-600 transition-all shadow-xl disabled:opacity-50"
                          >
-                            <ShoppingBag className="w-3 h-3" />
+                            <ShoppingBag className="w-4 h-4" />
                             <span>Add to Cart</span>
                          </button>
                       </td>

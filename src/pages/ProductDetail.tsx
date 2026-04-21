@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { Product, Review } from '../types';
 import { useStore } from '../store/useStore';
 import { motion } from 'motion/react';
-import { ShoppingBag, Heart, ArrowLeft, Shield, Truck, RefreshCcw, Star, Trash2, BarChart2 } from 'lucide-react';
+import { ShoppingBag, Heart, ArrowLeft, Shield, Truck, RefreshCcw, Star, Trash2, BarChart2, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import Swal from 'sweetalert2';
 
@@ -21,6 +21,7 @@ export default function ProductDetail() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const fetchReviews = async () => {
     if (!id) return;
@@ -240,7 +241,12 @@ export default function ProductDetail() {
             <div className="mb-10">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-900">Select Size (US)</h3>
-                <button className="text-xs font-bold text-gray-400 underline uppercase tracking-widest">Size Guide</button>
+                <button 
+                  onClick={() => setShowSizeGuide(true)}
+                  className="text-xs font-bold text-gray-400 underline uppercase tracking-widest hover:text-black transition-colors"
+                >
+                  Size Guide
+                </button>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                 {product.sizes.map(size => (
@@ -419,6 +425,73 @@ export default function ProductDetail() {
            </div>
         </div>
       </div>
+
+      {/* Size Guide Modal */}
+      {showSizeGuide && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white w-full max-w-xl rounded-[40px] overflow-hidden shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setShowSizeGuide(false)}
+              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-black hover:bg-gray-50 rounded-full transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="p-10">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600 mb-2">Reference</p>
+              <h2 className="text-3xl font-black italic tracking-tighter uppercase mb-8">Size Guide.</h2>
+
+              <div className="overflow-hidden border border-gray-100 rounded-3xl">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">US Men's</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Heel-to-Toe (cm)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {[
+                      { us: "7", cm: "24.4" },
+                      { us: "7.5", cm: "24.8" },
+                      { us: "8", cm: "25.2" },
+                      { us: "8.5", cm: "25.7" },
+                      { us: "9", cm: "26.1" },
+                      { us: "9.5", cm: "26.5" },
+                      { us: "10", cm: "26.9" },
+                      { us: "10.5", cm: "27.3" },
+                      { us: "11", cm: "27.8" },
+                      { us: "11.5", cm: "28.2" },
+                      { us: "12", cm: "28.6" },
+                      { us: "13", cm: "29.4" },
+                    ].map((row, i) => (
+                      <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-3 text-sm font-black">{row.us}</td>
+                        <td className="px-6 py-3 text-sm font-bold text-gray-500">{row.cm} cm</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-8 bg-amber-50 p-6 rounded-2xl border border-amber-100">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-2">Pro Tip</p>
+                <p className="text-xs text-amber-900 leading-relaxed">Measurement refers to your actual foot length. If you're between sizes, we recommend sizing up for a more breathable fit.</p>
+              </div>
+
+              <button 
+                onClick={() => setShowSizeGuide(false)}
+                className="w-full mt-8 bg-black text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-amber-600 transition-all shadow-lg"
+              >
+                Got it
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
